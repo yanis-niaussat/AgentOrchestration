@@ -1,0 +1,109 @@
+{
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -416,
+                -96
+            ],
+            "id": "2d2e056b-73fd-4998-ad6b-75fa0ae8cc0e",
+            "name": "When clicking ‘Execute workflow’"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Can you explain me how to use docker ?",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3,
+            "position": [
+                -224,
+                -96
+            ],
+            "id": "d893275a-f54c-48f4-8f7e-4b1cb751b88c",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                -224,
+                112
+            ],
+            "id": "d31e5cd6-fc24-4815-b567-d13b98df81eb",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "B2KTKxU8h1N4QhqX",
+                    "name": "Google Gemini(PaLM) Api account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "path": "a7eb7898-32aa-4c27-b2af-94a49cdaf637",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -416,
+                -208
+            ],
+            "id": "fb9887cf-d845-49a9-9b8c-e9241adc24f4",
+            "name": "Webhook",
+            "webhookId": "a7eb7898-32aa-4c27-b2af-94a49cdaf637"
+        }
+    ],
+    "connections": {
+        "When clicking ‘Execute workflow’": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                []
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "fe580ced43ddc5ee02eab2919af7042f7e002ef4e4e4bd5fb8edd439d126a022"
+    }
+}
