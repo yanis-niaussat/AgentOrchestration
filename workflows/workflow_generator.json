@@ -1,0 +1,88 @@
+{
+    "name": "workflow-generator",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "workflow-generator",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-wg-node",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "workflow-generator"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.description }}",
+                "options": {
+                    "systemMessage": "You are an expert n8n workflow architect and automation engineer.\n\nYour job is to generate a complete, ready-to-import n8n workflow JSON based on the user's description.\n\nStrict rules:\n1. Output ONLY a raw valid JSON object — no markdown, no code fences, no explanation text whatsoever.\n2. The JSON must have exactly these top-level keys: \"name\", \"nodes\", \"connections\", \"active\", \"settings\".\n3. Every node must include: \"parameters\", \"id\" (unique uuid-like string), \"name\", \"type\", \"typeVersion\", \"position\" ([x, y]).\n4. Replace any real credentials or API keys with descriptive placeholders like \"YOUR_OPENAI_API_KEY\", \"YOUR_SLACK_BOT_TOKEN\", \"YOUR_GOOGLE_SHEETS_ID\".\n5. Include a Webhook trigger node as entry point (type: n8n-nodes-base.webhook, path matching the use case).\n6. Add a final 'Respond to Webhook' node (type: n8n-nodes-base.respondToWebhook) that returns a meaningful JSON result.\n7. Wire all connections logically so the workflow is executable end-to-end.\n8. Use real n8n node types: n8n-nodes-base.httpRequest, n8n-nodes-base.set, n8n-nodes-base.if, n8n-nodes-base.scheduleTrigger, @n8n/n8n-nodes-langchain.agent, @n8n/n8n-nodes-langchain.lmChatGoogleGemini, etc.\n9. Position nodes in a left-to-right layout with 220px horizontal spacing and 300px vertical center.\n10. Set \"active\": false and \"settings\": {\"executionOrder\": \"v1\"}.\n\nGenerate the workflow now."
+                }
+            },
+            "id": "ai-agent-wg-node",
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.8,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-wg-model-node",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                460,
+                480
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIAL_ID",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "pinData": {},
+    "tags": []
+}
