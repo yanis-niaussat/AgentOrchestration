@@ -1,14 +1,13 @@
 import os
 import requests
 from dotenv import load_dotenv
-import json
 import time
 
 # Load environment variables
 load_dotenv()
 
 class N8nPrompt:
-    """Simple n8n prompt executor - all logic stays in n8n workflows."""
+    """Simple n8n prompt executor."""
     
     def __init__(self):
         base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678")
@@ -24,7 +23,6 @@ class N8nPrompt:
     def execute(self, webhook_path, data):
         """Execute n8n workflow via webhook."""
         webhook_url = self.base_url.replace("/api/v1", "") + f"/webhook/{webhook_path}"
-        
         try:
             response = requests.get(webhook_url, params=data)
             response.raise_for_status()
@@ -32,6 +30,19 @@ class N8nPrompt:
         except Exception as e:
             print(f"Error: {e}")
             return None
+    
+    def get_first_workflow_id(self):
+        """Get the first workflow ID."""
+        url = f"{self.base_url}/workflows"
+        try:
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            workflows = response.json()
+            if workflows and 'data' in workflows and len(workflows['data']) > 0:
+                return workflows['data'][0].get('id')
+        except Exception as e:
+            print(f"Error: {e}")
+        return None
     
     def get_result(self, workflow_id):
         """Get the latest execution result."""
@@ -53,23 +64,21 @@ class N8nPrompt:
     def extract_response(self, execution_result):
         """Extract AI text from execution result."""
         try:
-            if 'data' in execution_result and 'resultData' in execution_result['data']:
-                result_data = execution_result['data']['resultData']
-                if 'runData' in result_data:
-                    run_data = result_data['runData']
-                    
-                    # Find the output text in any node
-                    for node_name, node_runs in run_data.items():
-                        if node_runs and len(node_runs) > 0:
-                            for run in node_runs:
-                                if 'data' in run and 'main' in run['data']:
-                                    for main_data in run['data']['main']:
-                                        if main_data:
-                                            for item in main_data:
-                                                if 'json' in item and 'output' in item['json']:
-                                                    return item['json']['output']
-                                                elif 'json' in item and 'text' in item['json']:
-                                                    return item['json']['text']
+            result_data = execution_result.get('data', {}).get('resultData', {})
+            run_data = result_data.get('runData', {})
+            
+            for node_name, node_runs in run_data.items():
+                if node_runs and len(node_runs) > 0:
+                    for run in node_runs:
+                        main_data = run.get('data', {}).get('main', [])
+                        for main in main_data:
+                            if main:
+                                for item in main:
+                                    if 'json' in item:
+                                        if 'output' in item['json']:
+                                            return item['json']['output']
+                                        if 'text' in item['json']:
+                                            return item['json']['text']
             return None
         except Exception as e:
             print(f"Error extracting response: {e}")
@@ -78,7 +87,6 @@ class N8nPrompt:
 
 def main():
     """Ask for topic and get AI response from n8n."""
-    
     n8n = N8nPrompt()
     
     if not n8n.api_key:
@@ -89,9 +97,13 @@ def main():
     print("DYNAMIC PROMPT WITH N8N")
     print("=" * 60)
     
-    # Get user input
-    topic = input("\n📝 What topic would you like explained? ")
+    # Get workflow ID dynamically
+    workflow_id = n8n.get_first_workflow_id()
+    if not workflow_id:
+        print("Error: No workflows found")
+        return
     
+    topic = input("\n📝 What topic would you like explained? ")
     if not topic.strip():
         print("❌ No topic provided.")
         return
@@ -99,35 +111,30 @@ def main():
     print(f"\n🚀 Processing: {topic}")
     print("⏳ Waiting for AI...\n")
     
-    # Configuration
-    WEBHOOK_PATH = "dynamic-prompt-fixed"
-    WORKFLOW_ID = "FHSce2qW7x8cEav9Sws8Q"
-    
     # Execute workflow
-    response = n8n.execute(WEBHOOK_PATH, {"topic": topic})
+    response = n8n.execute("dynamic-prompt-fixed", {"topic": topic})
     
     if response:
-        # Wait for completion
-        time.sleep(5)
-        
-        # Get result
-        execution_result = n8n.get_result(WORKFLOW_ID)
-        
-        if execution_result and execution_result.get('status') == 'success':
-            print("=" * 60)
-            print("AI RESPONSE")
-            print("=" * 60)
+        # Poll for result
+        for attempt in range(10):
+            time.sleep(1)
+            execution_result = n8n.get_result(workflow_id)
             
-            ai_text = n8n.extract_response(execution_result)
-            
-            if ai_text:
-                print(f"\n{ai_text}\n")
-            else:
-                print("Could not extract response.")
-                print("View in n8n: http://localhost:5678/executions")
-        else:
-            print("⚠️  Processing failed or still running.")
-            print("View in n8n: http://localhost:5678/executions")
+            if execution_result:
+                status = execution_result.get('status')
+                if status in ['success', 'error', 'crashed', 'cancelled']:
+                    print("=" * 60)
+                    print("AI RESPONSE")
+                    print("=" * 60)
+                    
+                    ai_text = n8n.extract_response(execution_result)
+                    if ai_text:
+                        print(f"\n{ai_text}\n")
+                    else:
+                        print("Could not extract response.")
+                    return
+        
+        print("❌ Timeout waiting for execution.")
     else:
         print("❌ Failed to execute workflow.")
 
