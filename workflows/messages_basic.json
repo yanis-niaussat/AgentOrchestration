@@ -1,0 +1,88 @@
+{
+    "name": "messages-basic",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "messages-basic",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-mb-node",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "messages-basic"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.content }}",
+                "options": {
+                    "systemMessage": "You are a helpful, concise assistant. Answer the user's question clearly and directly."
+                }
+            },
+            "id": "ai-agent-mb-node",
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.8,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-mb-model-node",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                460,
+                480
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIAL_ID",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "pinData": {},
+    "tags": []
+}
