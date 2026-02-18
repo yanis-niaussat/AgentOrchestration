@@ -9,6 +9,7 @@ class N8nAPI:
     def __init__(self):
         self.base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678/api/v1")
         self.api_key = os.getenv("N8N_API_KEY")
+        self.verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
         self.headers = {
             "X-N8N-API-KEY": self.api_key,
             "Content-Type": "application/json"
@@ -18,7 +19,7 @@ class N8nAPI:
         """Fetch all workflows from n8n."""
         url = f"{self.base_url}/workflows"
         try:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, verify=self.verify_ssl)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -29,7 +30,7 @@ class N8nAPI:
         """Fetch a specific workflow by ID."""
         url = f"{self.base_url}/workflows/{workflow_id}"
         try:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, verify=self.verify_ssl)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -41,7 +42,7 @@ class N8nAPI:
         url = f"{self.base_url}/executions"
         params = {"limit": limit}
         try:
-            response = requests.get(url, headers=self.headers, params=params)
+            response = requests.get(url, headers=self.headers, params=params, verify=self.verify_ssl)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
