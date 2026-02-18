@@ -1,5 +1,5 @@
 {
-    "name": "N8N Workflow Generator",
+    "name": "workflow-generator",
     "nodes": [
         {
             "parameters": {
