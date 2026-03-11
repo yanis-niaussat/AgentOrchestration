@@ -1,0 +1,113 @@
+{
+    "name": "conversation",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "conversation",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-cv-node",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "conversation"
+        },
+        {
+            "parameters": {
+                "language": "javaScript",
+                "jsCode": "// The body is {messages: [{role:'human',content:'...'}, ...]}\nconst messages = $input.first().json.body.messages;\n\nif (!Array.isArray(messages) || messages.length === 0) {\n  throw new Error('Expected a non-empty array of messages.');\n}\n\n// The last message must be from the human\nconst last = messages[messages.length - 1];\nif (last.role !== 'human') {\n  throw new Error('The last message must have role \"human\".');\n}\n\n// Format previous turns as readable history\nconst history = messages.slice(0, -1);\nconst historyText = history\n  .map(m => `${m.role === 'human' ? 'Human' : 'AI'}: ${m.content}`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    history: historyText,\n    question: last.content\n  }\n}];\n"
+            },
+            "id": "code-cv-node",
+            "name": "Format Conversation",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.question }}",
+                "options": {
+                    "systemMessage": "=You are a helpful assistant engaged in an ongoing conversation.\n\n{% if $json.history %}Here is the conversation so far:\n{{ $json.history }}\n\nContinue the conversation naturally based on the history above.{% else %}This is the start of a new conversation.{% endif %}"
+                }
+            },
+            "id": "ai-agent-cv-node",
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.8,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-cv-model-node",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                680,
+                480
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIAL_ID",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Format Conversation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Conversation": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "pinData": {},
+    "tags": []
+}
