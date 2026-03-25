@@ -1,52 +1,38 @@
 import os
+import sys
 import json
-import requests
-from typing import Optional
 from dotenv import load_dotenv
+
+# Adding root to path to allow importing from triggers package
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from triggers.workflow_client import WorkflowClient
 
 # Load environment variables
 load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Mirrors the professor's role-based message pattern:
-#
-#   messages = [
-#       SystemMessage(content="You explain concepts briefly."),
-#       HumanMessage(content="What is a vector database?")
-#   ]
-#   response = llm.invoke(messages)
-#
-# Here the message list is POSTed to the n8n webhook as JSON.
-# The system message is wired into the AI Agent's systemMessage field,
-# and the human message becomes the prompt text.
 # ---------------------------------------------------------------------------
 
 WEBHOOK_PATH = "messages-chat"
-
 
 def system_message(content: str) -> dict:
     """Equivalent of SystemMessage(content="...")."""
     return {"role": "system", "content": content.strip()}
 
-
 def human_message(content: str) -> dict:
     """Equivalent of HumanMessage(content="...")."""
     return {"role": "human", "content": content.strip()}
 
-
-def invoke(messages: list, timeout: int = 180) -> Optional[str]:
+def invoke(messages: list) -> str:
     """
     Send a list of role-based messages to the n8n workflow and return the reply.
-    Equivalent to:  llm.invoke([SystemMessage(...), HumanMessage(...)])
-
-    The payload shape:
-        {
-            "system": "You explain concepts briefly.",
-            "human":  "What is a vector database?"
-        }
     """
-    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678").rstrip("/")
-    webhook_url = f"{base_url}/webhook/{WEBHOOK_PATH}"
+    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678/api/v1")
+    webhook_url = f"{base_url.replace('/api/v1', '')}/webhook/{WEBHOOK_PATH}"
+    verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
+    
+    client = WorkflowClient(webhook_url, verify_ssl=verify_ssl)
 
     # Build payload from the message list (last system + last human wins)
     payload = {}
@@ -55,12 +41,11 @@ def invoke(messages: list, timeout: int = 180) -> Optional[str]:
 
     try:
         print("  Waiting for AI response …", end="", flush=True)
-        resp = requests.post(webhook_url, json=payload, timeout=timeout)
+        resp = client.post(data=payload)
         print(" done.")
-        resp.raise_for_status()
 
         try:
-            body = resp.json()
+            body = resp
             if isinstance(body, list) and body:
                 body = body[0]
             for key in ("output", "text", "message", "response", "content"):
@@ -68,16 +53,11 @@ def invoke(messages: list, timeout: int = 180) -> Optional[str]:
                     return str(body[key])
             return json.dumps(body)
         except Exception:
-            return resp.text
+            return str(resp)
 
     except Exception as exc:
         print(f"\n  [error] {exc}")
         return None
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def main():
     print("=" * 60)
@@ -86,19 +66,27 @@ def main():
 
     # Collect the system persona
     default_system = "You explain concepts briefly and clearly."
-    system_input = input(
-        f"\nSystem message (press Enter for default):\n"
-        f"  [{default_system}]\n> "
-    ).strip()
+    try:
+        system_input = input(
+            f"\nSystem message (press Enter for default):\n"
+            f"  [{default_system}]\n> "
+        ).strip()
+    except EOFError:
+        return
+        
     system_content = system_input if system_input else default_system
 
     # Collect the human question
-    question = input("\nYour question:\n> ").strip()
+    try:
+        question = input("\nYour question:\n> ").strip()
+    except EOFError:
+        return
+        
     if not question:
         print("No question provided. Exiting.")
         return
 
-    # Build the message list — mirrors the professor's pattern exactly
+    # Build the message list
     messages = [
         system_message(system_content),
         human_message(question),

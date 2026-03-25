@@ -1,10 +1,10 @@
 {
-    "name": "Dynamic Prompt Template - Fixed",
+    "name": "Dynamic Prompt",
     "nodes": [
         {
             "parameters": {
-                "httpMethod": "GET",
-                "path": "dynamic-prompt-fixed",
+                "httpMethod": "POST",
+                "path": "dynamic-prompt",
                 "responseMode": "lastNode",
                 "options": {}
             },
@@ -16,12 +16,12 @@
                 240,
                 300
             ],
-            "webhookId": "dynamic-prompt-fixed"
+            "webhookId": "dynamic-prompt"
         },
         {
             "parameters": {
                 "promptType": "define",
-                "text": "={{ \"Explain \" + $json.query.topic + \" in simple terms.\" }}",
+                "text": "={{ $json.body.prompt }}",
                 "options": {}
             },
             "id": "ai-agent-node",

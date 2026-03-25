@@ -1,49 +1,43 @@
 import os
+import sys
 import json
-import requests
-from typing import Optional
 from dotenv import load_dotenv
+
+# Adding root to path to allow importing from triggers package
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from triggers.workflow_client import WorkflowClient
 
 # Load environment variables
 load_dotenv()
 
 # ---------------------------------------------------------------------------
-# Mirrors the professor's single-turn HumanMessage pattern:
-#
-#   llm.invoke([HumanMessage(content="What is an embedding?")])
-#
-# Here the "LLM" is the n8n workflow (messages_basic workflow), and the
-# HumanMessage is the JSON body we POST to its webhook.
+# Mirrors the professor's single-turn HumanMessage pattern
 # ---------------------------------------------------------------------------
 
 WEBHOOK_PATH = "messages-basic"
 
-
 def human_message(content: str) -> dict:
-    """
-    Build a HumanMessage-style dict — the equivalent of:
-        HumanMessage(content="...")
-    """
+    """Build a HumanMessage-style dict"""
     return {"role": "human", "content": content.strip()}
 
-
-def invoke(message: dict, timeout: int = 180) -> Optional[str]:
+def invoke(message: dict) -> str:
     """
     Send a single HumanMessage to the n8n workflow and return the AI reply.
-    Equivalent to:  llm.invoke([HumanMessage(content="...")])
     """
-    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678").rstrip("/")
-    webhook_url = f"{base_url}/webhook/{WEBHOOK_PATH}"
+    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678/api/v1")
+    webhook_url = f"{base_url.replace('/api/v1', '')}/webhook/{WEBHOOK_PATH}"
+    verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
+    
+    client = WorkflowClient(webhook_url, verify_ssl=verify_ssl)
 
     try:
         print("  Waiting for AI response …", end="", flush=True)
-        resp = requests.post(webhook_url, json=message, timeout=timeout)
+        resp = client.post(data=message)
         print(" done.")
-        resp.raise_for_status()
 
         # n8n (responseMode: lastNode) returns the agent output in the body
         try:
-            body = resp.json()
+            body = resp
             if isinstance(body, list) and body:
                 body = body[0]
             for key in ("output", "text", "message", "response", "content"):
@@ -51,23 +45,22 @@ def invoke(message: dict, timeout: int = 180) -> Optional[str]:
                     return str(body[key])
             return json.dumps(body)
         except Exception:
-            return resp.text
+            return str(resp)
 
     except Exception as exc:
         print(f"\n  [error] {exc}")
         return None
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def main():
     print("=" * 60)
     print("  MESSAGES BASIC — Single-turn AI chat via n8n")
     print("=" * 60)
 
-    question = input("\nAsk anything:\n> ").strip()
+    try:
+        question = input("\nAsk anything:\n> ").strip()
+    except EOFError:
+        return
+        
     if not question:
         print("No question provided. Exiting.")
         return
@@ -85,7 +78,6 @@ def main():
         print(f"\n{response_text}\n")
     else:
         print("No response received.")
-
 
 if __name__ == "__main__":
     main()

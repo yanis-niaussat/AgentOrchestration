@@ -1,56 +1,47 @@
 import os
+import sys
 import json
-import requests
-from typing import Optional
+import uuid
 from dotenv import load_dotenv
+
+# Adding root to path to allow importing from triggers package
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from triggers.workflow_client import WorkflowClient
 
 # Load environment variables
 load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Mirrors the professor's multi-turn conversation pattern:
-#
-#   conversation = [
-#       HumanMessage(content="What is RAG?"),
-#       AIMessage(content="RAG combines retrieval with generation."),
-#       HumanMessage(content="Why is it useful?")
-#   ]
-#   response = llm.invoke(conversation)
-#
-# The full message list is POSTed to n8n as a JSON array.
-# A Code node in the workflow formats the history, then the AI Agent replies.
 # ---------------------------------------------------------------------------
 
 WEBHOOK_PATH = "conversation"
-
 
 def human_message(content: str) -> dict:
     """Equivalent of HumanMessage(content="...")."""
     return {"role": "human", "content": content.strip()}
 
-
 def ai_message(content: str) -> dict:
     """Equivalent of AIMessage(content="...")."""
     return {"role": "ai", "content": content.strip()}
 
-
-def invoke(conversation: list, timeout: int = 180) -> Optional[str]:
+def invoke(conversation: list, session_id: str) -> str:
     """
-    Send the full conversation list to n8n and return the AI reply.
-    Equivalent to:  llm.invoke([HumanMessage(...), AIMessage(...), HumanMessage(...)])
+    Send the full conversation list and a unique session ID to n8n and return the AI reply.
     """
-    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678").rstrip("/")
-    webhook_url = f"{base_url}/webhook/{WEBHOOK_PATH}"
+    base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678/api/v1")
+    webhook_url = f"{base_url.replace('/api/v1', '')}/webhook/{WEBHOOK_PATH}"
+    verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
+    
+    client = WorkflowClient(webhook_url, verify_ssl=verify_ssl)
 
     try:
         print("  Waiting for AI response …", end="", flush=True)
-        # Wrap in an object so n8n can access it as $json.body.messages
-        resp = requests.post(webhook_url, json={"messages": conversation}, timeout=timeout)
+        resp = client.post(data={"messages": conversation, "sessionId": session_id})
         print(" done.")
-        resp.raise_for_status()
 
         try:
-            body = resp.json()
+            body = resp
             if isinstance(body, list) and body:
                 body = body[0]
             for key in ("output", "text", "message", "response", "content"):
@@ -58,12 +49,11 @@ def invoke(conversation: list, timeout: int = 180) -> Optional[str]:
                     return str(body[key])
             return json.dumps(body)
         except Exception:
-            return resp.text
+            return str(resp)
 
     except Exception as exc:
         print(f"\n  [error] {exc}")
         return None
-
 
 def print_conversation(conversation: list):
     """Pretty-print the conversation history."""
@@ -72,11 +62,6 @@ def print_conversation(conversation: list):
         role = label.get(msg["role"], msg["role"].capitalize())
         print(f"  [{role}] {msg['content']}")
 
-
-# ---------------------------------------------------------------------------
-# Main — interactive multi-turn session
-# ---------------------------------------------------------------------------
-
 def main():
     print("=" * 60)
     print("  CONVERSATION — Multi-turn AI chat via n8n")
@@ -84,9 +69,14 @@ def main():
     print("=" * 60)
 
     conversation = []
+    # Generate a unique session ID for the conversation thread
+    session_id = uuid.uuid4().hex
 
     while True:
-        user_input = input("\nYou: ").strip()
+        try:
+            user_input = input("\nYou: ").strip()
+        except EOFError:
+            break
 
         if not user_input:
             continue
@@ -95,25 +85,20 @@ def main():
             break
         if user_input.lower() == "reset":
             conversation = []
-            print("  [Conversation reset]")
+            session_id = uuid.uuid4().hex # New session ID for new conversation
+            print(f"  [Conversation reset - New Session ID: {session_id}]")
             continue
 
-        # Append the new HumanMessage — mirrors: HumanMessage(content="...")
         conversation.append(human_message(user_input))
 
-        # Invoke — mirrors: llm.invoke(conversation)
-        response_text = invoke(conversation)
+        response_text = invoke(conversation, session_id)
 
         if response_text:
-            # Append the AIMessage to keep history growing
-            # mirrors: AIMessage(content=response.content)
             conversation.append(ai_message(response_text))
             print(f"\nAI: {response_text}")
         else:
-            # Remove the last human message so the turn can be retried
             conversation.pop()
             print("  No response received. Please try again.")
-
 
 if __name__ == "__main__":
     main()

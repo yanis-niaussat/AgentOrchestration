@@ -1,0 +1,140 @@
+{
+    "name": "Vector Store Pipeline",
+    "nodes": [
+        {
+            "parameters": {
+                "formTitle": "Vector Store Form",
+                "formFields": {
+                    "values": [
+                        {
+                            "fieldLabel": "Texts (one per line)",
+                            "fieldName": "texts",
+                            "fieldType": "textarea",
+                            "requiredField": true
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "form-trigger-vs",
+            "name": "On form submission",
+            "type": "n8n-nodes-base.formTrigger",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "vector-store",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-vector-store",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "vector-store"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "default-data-loader-vs",
+            "name": "Default Data Loader",
+            "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+            "typeVersion": 1.1,
+            "position": [
+                460,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "insert",
+                "memoryKey": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "vector_store_key"
+                }
+            },
+            "id": "in-memory-vector-store-vs",
+            "name": "In-Memory Vector Store",
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+            "typeVersion": 1.2,
+            "position": [
+                660,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-embeddings-vs",
+            "name": "Google Gemini Embeddings",
+            "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                660,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "On form submission": {
+            "main": [
+                [
+                    {
+                        "node": "Default Data Loader",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Default Data Loader",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Default Data Loader": {
+            "ai_document": [
+                [
+                    {
+                        "node": "In-Memory Vector Store",
+                        "type": "ai_document",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Embeddings": {
+            "ai_embedding": [
+                [
+                    {
+                        "node": "In-Memory Vector Store",
+                        "type": "ai_embedding",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

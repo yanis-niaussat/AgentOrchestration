@@ -1,0 +1,86 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.query }}",
+                "options": {
+                    "systemMessage": "You are a helpful teaching assistant."
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3,
+            "position": [
+                992,
+                368
+            ],
+            "id": "03ae4eaf-fcf8-49b1-8c84-a955a470bb48",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "chat-prompt",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                688,
+                368
+            ],
+            "id": "e4282881-01fe-4251-8aa9-7623bd17fb64",
+            "name": "Webhook",
+            "webhookId": "f6869c20-693d-480d-a6c7-869cbca1ff8f"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                864,
+                576
+            ],
+            "id": "b59592c7-1b30-4629-85a6-eafe68a842c3",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "B2KTKxU8h1N4QhqX",
+                    "name": "Google Gemini(PaLM) Api account 2"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "fe580ced43ddc5ee02eab2919af7042f7e002ef4e4e4bd5fb8edd439d126a022"
+    }
+}

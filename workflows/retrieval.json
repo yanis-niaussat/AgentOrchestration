@@ -1,0 +1,130 @@
+{
+    "name": "Retrieval Pipeline",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "retrieval",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-retrieval",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "retrieval"
+        },
+        {
+            "parameters": {
+                "text": "={{ $json.body.query }}",
+                "options": {}
+            },
+            "id": "ai-agent-retrieval",
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.8,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-chat-model-ret",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                460,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "retrieve-as-tool",
+                "memoryKey": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "vector_store_key"
+                }
+            },
+            "id": "in-memory-vector-store-ret",
+            "name": "In-Memory Vector Store",
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+            "typeVersion": 1.2,
+            "position": [
+                660,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "gemini-embeddings-ret",
+            "name": "Google Gemini Embeddings",
+            "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                660,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "In-Memory Vector Store": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Embeddings": {
+            "ai_embedding": [
+                [
+                    {
+                        "node": "In-Memory Vector Store",
+                        "type": "ai_embedding",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    }
+}
