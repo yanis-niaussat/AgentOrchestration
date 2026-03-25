@@ -2,6 +2,7 @@ import os
 import json
 import re
 import requests
+import urllib3
 import time
 from typing import Optional
 from dotenv import load_dotenv
@@ -39,6 +40,12 @@ class N8nWorkflowGenerator:
         self.webhook_url = f"{base_url}/webhook/{self.WEBHOOK_PATH}"
         api_base = base_url + "/api/v1"
         self.api_key = os.getenv("N8N_API_KEY")
+        self.verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
+        
+        if not self.verify_ssl:
+            # Suppress InsecureRequestWarning if SSL verification is disabled
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
         self.api_headers = {
             "X-N8N-API-KEY": self.api_key,
             "Content-Type": "application/json",
@@ -63,6 +70,7 @@ class N8nWorkflowGenerator:
                 self.webhook_url,
                 json={"description": prompt},
                 timeout=180,
+                verify=self.verify_ssl,
             )
             print(" done.")
             resp.raise_for_status()
@@ -94,6 +102,7 @@ class N8nWorkflowGenerator:
                 f"{self.api_base}/workflows",
                 headers=self.api_headers,
                 timeout=10,
+                verify=self.verify_ssl,
             )
             resp.raise_for_status()
             data = resp.json().get("data", [])
@@ -110,6 +119,7 @@ class N8nWorkflowGenerator:
                 headers=self.api_headers,
                 params={"workflowId": workflow_id, "limit": 1, "includeData": "true"},
                 timeout=10,
+                verify=self.verify_ssl,
             )
             resp.raise_for_status()
             data = resp.json().get("data", [])

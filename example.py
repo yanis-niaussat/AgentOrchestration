@@ -1,5 +1,6 @@
 import os
 import requests
+import urllib3
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -10,6 +11,11 @@ class N8nAPI:
         self.base_url = os.getenv("N8N_BASE_URL", "http://localhost:5678/api/v1")
         self.api_key = os.getenv("N8N_API_KEY")
         self.verify_ssl = os.getenv("N8N_SSL_VERIFY", "true").lower() == "true"
+        
+        if not self.verify_ssl:
+            # Suppress InsecureRequestWarning if SSL verification is disabled
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
         self.headers = {
             "X-N8N-API-KEY": self.api_key,
             "Content-Type": "application/json"

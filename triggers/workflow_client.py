@@ -1,5 +1,6 @@
 import requests
 import json
+import urllib3
 from typing import Optional, Dict, Any
 
 class WorkflowClient:
@@ -20,6 +21,11 @@ class WorkflowClient:
         """
         self.webhook_url = webhook_url
         self.verify_ssl = verify_ssl
+        
+        if not self.verify_ssl:
+            # Suppress InsecureRequestWarning if SSL verification is disabled
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
         self.auth = (auth_user, auth_password) if auth_user and auth_password else None
         self.headers = {
             "Content-Type": "application/json"
