@@ -10,10 +10,6 @@ from triggers.workflow_client import WorkflowClient
 # Load environment variables
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Mirrors the professor's role-based message pattern:
-# ---------------------------------------------------------------------------
-
 WEBHOOK_PATH = "messages-chat"
 
 def system_message(content: str) -> dict:

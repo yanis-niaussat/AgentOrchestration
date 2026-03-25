@@ -11,10 +11,6 @@ from triggers.workflow_client import WorkflowClient
 # Load environment variables
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Mirrors the professor's multi-turn conversation pattern:
-# ---------------------------------------------------------------------------
-
 WEBHOOK_PATH = "conversation"
 
 def human_message(content: str) -> dict:

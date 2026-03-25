@@ -9,11 +9,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Prompt template (mirrors the professor's PromptTemplate approach, but kept
-# lightweight so we don't need langchain installed).
-# ---------------------------------------------------------------------------
-
 WORKFLOW_TEMPLATE = (
     "Generate a complete, production-ready n8n workflow JSON for the following use case:\n\n"
     "{description}\n\n"

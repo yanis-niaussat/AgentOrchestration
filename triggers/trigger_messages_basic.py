@@ -10,10 +10,6 @@ from triggers.workflow_client import WorkflowClient
 # Load environment variables
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Mirrors the professor's single-turn HumanMessage pattern
-# ---------------------------------------------------------------------------
-
 WEBHOOK_PATH = "messages-basic"
 
 def human_message(content: str) -> dict:
